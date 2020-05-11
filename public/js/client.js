@@ -15,6 +15,8 @@ var Client = (function(window) {
     var useAccmp    = null;
     var useWtnss    = null;
 
+    var sceneCount = 5;
+
     var images = {};
 
     var container   = null;
@@ -53,6 +55,23 @@ var Client = (function(window) {
             socket.emit('assignroles', gameID);
             $(this).hide();
         });
+
+        $('#bttnDrawSceneCard').click(function(ev) {
+
+            var sceneKeys = [gameState.sceneKeys[sceneCount] ];
+            var instantiateSceneCard = function(params)
+            {
+                //myKonvas.InstantiateImgArray(sixKeys, screen.width/2, screen.height/2, true, false, true, true, null);
+                myKonvas.InstantiateImgGrid(sceneKeys, screen.width/2,  screen.height/2 - 200, 6, false, true, true, null);
+            }
+            loadImages(sceneKeys, instantiateSceneCard, sceneKeys);
+        });
+
+        if(isHost === false)
+        {
+            $('#bttnStartGame').hide();
+            $('#bttnDrawSceneCard').hide(); 
+        }
     };
   
     /**
