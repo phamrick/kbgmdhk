@@ -7,7 +7,6 @@ var myKonvas = (function() {
   var layerMap;
   var layerPieces;
   var stage;
-  var objectID = 0;
 
   var CreateStage =  function()
   {
@@ -125,16 +124,16 @@ var myKonvas = (function() {
       callBack(text);
   }
 
-  var InstantiateRectText = function(iText, iX, iY, iWidth, callBack)
+  var InstantiateRectText = function(iText, iX, iY, iWidth, iFontSize, callBack)
   {
     var ktext = new Konva.Text({
       x: iX,
       y: iY,
       text:iText,
-      fontSize: 30,
+      fontSize: iFontSize,
       fill: 'black',
-      width: iWidth,
-      padding: 2,
+      // width: iWidth,
+      padding: 2
     });
 
     var rect = new Konva.Rect({
@@ -182,13 +181,13 @@ var myKonvas = (function() {
 
     InstantiateImgGrid(iImgKeys, iX, iY, iWrapCount, iCentered, false, false, callBackParam);
 
-    layerPieces.add(group);
-    layerPieces.draw();
-
     if(callBack)
       callBack(group);
 
-    return group.getClientRect();
+    layerPieces.add(group);
+    layerPieces.draw();
+
+    return group;
   }
 
   var InstantiateImgGrid = function(iImgKeys, iX, iY, iWrapCount, iCentered, iAddToLayer, iDraggable, callBackParam)
@@ -250,7 +249,6 @@ var myKonvas = (function() {
 
   var InstantiateImg = function (imageDOM, iX, iY, iCentered, iDraggable, iAddToLayer, iDrawLayer, callBackParam)
   {
-    objectID++;
 
     if(typeof iX === 'string')
       if(iX.endsWith('%'))
@@ -263,7 +261,7 @@ var myKonvas = (function() {
       image: imageDOM,
       x: parseInt(iX) + (iCentered ? (-imageDOM.width/2): 0),
       y: parseInt(iY) + (iCentered ? (-imageDOM.height/2): 0),
-      id: objectID.toString(),
+      id: getFilenameNoExt(imageDOM.src),
       draggable: iDraggable
     });
 
@@ -281,6 +279,11 @@ var myKonvas = (function() {
 
     if (callBackParam)
       callBackParam.callBack(callBackParam.param, oKimg);
+  }
+
+  function getFilenameNoExt (iFilePath) {
+    var filename = iFilePath.split('/').pop();
+    return filename.substr(0, filename.lastIndexOf('.'));
   }
 
   var CreatePieces = function(iPiecesConfig)
@@ -308,6 +311,12 @@ var myKonvas = (function() {
       }
     }
 
+    layerPieces.draw();
+  }
+
+  var RunCallbackOnPiecesLayer = function(callback)
+  {
+    callback(layerPieces);
     layerPieces.draw();
   }
 
@@ -503,7 +512,8 @@ var myKonvas = (function() {
     InstantiateImgGrid: InstantiateImgGrid,
     InstaniateImgGridGroup: InstaniateImgGridGroup,
     InstaniateText: InstaniateText,
-    InstantiateRectText: InstantiateRectText
+    InstantiateRectText: InstantiateRectText,
+    RunCallbackOnPiecesLayer: RunCallbackOnPiecesLayer
   };
 
 })();

@@ -88,6 +88,42 @@ var assignRoles = function(gameID)
 }
 
 /**
+ * murdcardschosen
+ */
+
+var murderCardsChosen = function(data)
+{
+    var sess = this.request.session;
+
+    var debugInfo = {
+      socketID : this.id,
+      event    : 'join',
+      gameID   : data.gameID,
+      session  : sess
+    };
+  
+    // Check if user has permission to access this game
+    if (data.gameID !== sess.gameID) {
+      console.log('ERROR: Access Denied', debugInfo);
+      this.emit('error', {message: "You cannot join this game"});
+      return;
+    }
+  
+    // Lookup game in database
+    var game = DB.find(data.gameID);
+    if (!game) {
+      console.log('ERROR: Game Not Found', debugInfo);
+      this.emit('error', {message: "Game not found"});
+      return;
+    }
+
+    game.setMurdCardsChosen(data.meansChosen, data.evidenceChosen);
+
+    IO.sockets.in(data.gameID).emit('update', game);
+    //this.in(gameID).emit('update', game);
+}
+
+/**
  * Remove player from game
  */
 var disconnect = function() {
@@ -136,6 +172,7 @@ exports.attach = function(io, db) {
     socket.on('join', join);
     socket.on('disconnect', disconnect);
     socket.on('assignroles', assignRoles);
+    socket.on('murdercardschosen', murderCardsChosen);
 
     console.log('Socket '+socket.id+' connected');
   });

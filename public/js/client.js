@@ -1,7 +1,11 @@
-
 $(window).bind("beforeunload",function(event) {
     return "If you reload the page you will be removed fromthe game!";
 });
+
+var isMobile = false;
+if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ) {
+  isMobile = true;
+}
 
 var Client = (function(window) {
 
@@ -14,6 +18,8 @@ var Client = (function(window) {
     var role        = null;
     var useAccmp    = null;
     var useWtnss    = null;
+    var myMeansChosen = '';
+    var myEvidenceChosen = '';
 
     var sceneCount = 5;
 
@@ -83,12 +89,14 @@ var Client = (function(window) {
         socket.on('update', function(data) {
 
             gameState = data;
-
-            if(gameState.updateEvt === 'assignroles')
+            this.evt_type_assignroles = 'assignroles';
+            this.evt_type_murdercardschosen = 'murdercardschosen';
+            if (gameState.updateEvt === gameState.evt_type_assignroles)
             {
                 if(isHost === false)
                 {
                     var gsPlayer = gameState.players[playerName];
+                    role = gsPlayer.role;
 
                     // role = gsPlayer.role;
                     // document.getElementById('role').innerHTML = "Role: " + role;
@@ -98,6 +106,22 @@ var Client = (function(window) {
                 } else {
                     instCardsPublic();
                     hostLoadCauseLocSceneImgs();
+                }
+            } else if (gameState.updateEvt === gameState.evt_type_murdercardschosen)
+            {
+                if(isHost === false)
+                {
+                    if(role === gameState.r_fsci)
+                    {
+                        var imgKeys = [gameState.meansChosen, gameState.evidenceChosen];
+                        loadImages(imgKeys, function(params) {
+
+                            myKonvas.InstantiateImgArray(imgKeys, 140, 70, true, false, true, true, null);
+                        }, 
+                        null);
+                        
+                        createInfoBoxAndShowRole();
+                    }
                 }
             }
 
@@ -136,22 +160,9 @@ var Client = (function(window) {
 
         for(var playerKey in iPlayerImgParams)
         {
-            var addPlayerName = function(iGroup) {
-                var rect = iGroup.getClientRect();
-                myKonvas.InstantiateRectText('  ' + playerKey, 
-                    rect.x + rect.width/2, 
-                    rect.y + rect.height/2 - 35, 
-                    rect.width/2 * 0.9,
-                    function(iText, iRect) {
-                        iGroup.add(iRect);
-                        iGroup.add(iText);
-                        var layer = iGroup.getLayer();
-                        layer.draw();
-                    }
-                );
-            }
-
-            dims = myKonvas.InstaniateImgGridGroup(iPlayerImgParams[playerKey], xOffset, yOffset, 4, false, true, addPlayerName);
+            group = myKonvas.InstaniateImgGridGroup(iPlayerImgParams[playerKey], xOffset, yOffset, 4, false, true, null);
+            addPlayerName(group, playerKey);
+            var dims = group.getClientRect();
             yOffset = dims.height + yOffset + 10;
 
             if(yOffset + dims.height > window.innerHeight)
@@ -162,7 +173,85 @@ var Client = (function(window) {
         }
     }
 
+    var addPlayerName = function(iGroup, iPlayerName) {
+        var rect = iGroup.getClientRect();
+        myKonvas.InstantiateRectText('  ' + iPlayerName, 
+            rect.x + rect.width/2, 
+            rect.y + rect.height/2 - 35, 
+            rect.width/2 * 0.9,
+            30,
+            function(iText, iRect) {
+                iGroup.add(iRect);
+                iGroup.add(iText);
+                var layer = iGroup.getLayer();
+                layer.draw();
+            }
+        );
+    }
+
     var instCardsAfterLoad = function(iCardKeys)
+    {
+        var callback = null;
+        if(role !== gameState.r_fsci)
+            callback = hideRoleKimg;
+
+        var group = myKonvas.InstaniateImgGridGroup(iCardKeys, 0, 0, 4, false, true, callback);
+
+        if(role !== gameState.r_fsci)
+            setDblClickOnCards(group);
+    }
+
+    var hideRoleKimg = function(iGroup)
+    {
+        var children = iGroup.getChildren().toArray();
+
+        var i = children.length - 1;
+
+        while (i > -1)
+        {
+            var kimg = children[i];
+            var id = kimg.id();
+
+            if(id === gameState.r_fsci || 
+                id === gameState.r_mrd ||
+                id === gameState.r_wtnss ||
+                id === gameState.r_invst)
+            {
+                kimg.hide();
+            }
+
+            i--;
+        }
+    }
+
+    var showRoleKimg = function(iLayer)
+    {
+        var oGroup = iLayer.getChildren(function(node){
+            return node.getClassName() === 'Group';
+         }).toArray()[0];
+
+        var children = oGroup.getChildren().toArray();
+
+        var i = children.length - 1;
+        
+        while (i > -1)
+        {
+            var kimg = children[i];
+            var id = kimg.id();
+
+            if(id === gameState.r_fsci || 
+                id === gameState.r_mrd ||
+                id === gameState.r_wtnss ||
+                id === gameState.r_invst)
+            {
+                kimg.show();
+            }
+
+            i--;
+        }
+    }
+
+    var createInfoBoxAndShowRole = function()
     {
         var playerMurd = "";
         var playerAccm = "";
@@ -179,26 +268,99 @@ var Client = (function(window) {
                 playerwitness = player.name;
         }
 
-        var infoMurd = "murderer:   " + playerMurd;
-        var infoAccm = playerAccm.length > 0 ? "\naccomplice:  "   + playerAccm : "";
-        var infoWtnss = playerwitness.length > 0 ? "\nwitness:    " + playerwitness : "";
+        var infoMurd = '';
+        var infoAccm = '';
+        var infoWtnss = '';
+
+        var q = "?????";
+
+        var x = 140;
+        var y = 350;
 
         if (role === gameState.r_fsci)
         {
-            myKonvas.InstantiateRectText(infoMurd + infoAccm + infoWtnss, 150, 350, 300, null);
+            infoMurd = "murderer:     " + playerMurd;
+            infoAccm = playerAccm.length > 0 ? "\naccomplice:  "   + playerAccm : "";
+            infoWtnss = playerwitness.length > 0 ? "\nwitness:       " + playerwitness : "";
 
-        } else if (role === gameState.r_mrd && infoAccm.length > 0) {
+            y = 10;
 
-            myKonvas.InstantiateRectText(infoAccm.substr(1), 150, 350, 300, null);
+        } else if (role === gameState.r_mrd) {
 
-        } else if (role === gameState.r_accmp || role === gameState.r_wtnss)
+            infoAccm = playerAccm.length > 0 ? "accomplice:  "   + playerAccm : "";
+            infoWtnss = playerwitness.length > 0 ? "\nwitness:       " + q : "";
+
+            if(infoAccm.length === 0 && infoWtnss.length === 0)
+                infoMurd = "all other players\nare investigators";
+
+        } else if (role === gameState.r_accmp)
         {
-            myKonvas.InstantiateRectText(infoMurd + infoAccm, 150, 350, 300, null);
-        } 
+            infoMurd = "murderer:     " + playerMurd;
+            infoWtnss = playerwitness.length > 0 ? "\nwitness:       " + q : "";
 
-        myKonvas.InstaniateImgGridGroup(iCardKeys, 0, 0, 4, false, true, null);
+        } else if (role === gameState.r_wtnss) {
+            infoMurd = "murderer:     " + playerMurd;
+            infoAccm = playerAccm.length > 0 ? "\naccomplice:  "   + playerAccm : "";
+        } else {
+            infoMurd = "murderer:     " + q;
+            infoAccm = playerAccm.length > 0 ? "\naccomplice:  "   + q : "";
+            infoWtnss = playerwitness.length > 0 ? "\nwitness:       " + q : "";
+        }
 
-        //myKonvas.InstantiateImgGrid(iCardKeys, 0, 0, 4, false, true);
+        // var fontSize = isMobile === false ? 30: 20;
+        var width = isMobile === false ? 250: 225;
+
+        myKonvas.InstantiateRectText(infoMurd + infoAccm + infoWtnss, x, y, width, 20, null);
+        myKonvas.RunCallbackOnPiecesLayer(showRoleKimg);
+    }
+
+    var setDblClickOnCards = function(iGroup)
+    {
+        var children = iGroup.getChildren().toArray();
+
+        var i = 7;
+        while(i > -1)
+        {
+            var kimg = children[i];
+            kimg.on('dblclick', dblclickOnCard);
+            kimg.on('dbltap', dblclickOnCard);
+            
+            i--;
+        }
+    }
+
+    var dblclickOnCard = function(evt)
+    {
+        var kimg = evt.target;
+        if (kimg.id().startsWith('means'))
+            myMeansChosen = kimg.id();
+        if (kimg.id().startsWith('evidence'))
+            myEvidenceChosen = kimg.id();
+
+        alert(kimg.id());
+
+        if (myMeansChosen.length === 0 || myEvidenceChosen.length === 0)
+        {
+            return
+        } else if (role === gameState.r_mrd)
+        {
+            if (gameState.meansChosen.length > 0 && gameState.evidenceChosen.length > 0)
+                return;
+            
+            if (myMeansChosen.length > 0 && myEvidenceChosen.length > 0)
+            {
+                socket.emit(gameState.evt_type_murdercardschosen, 
+                            {gameID: gameID,
+                            meansChosen:  myMeansChosen,
+                            evidenceChosen: myEvidenceChosen});
+            }
+
+            createInfoBoxAndShowRole();
+        }  else {
+            createInfoBoxAndShowRole();
+        }
+
+        
     }
 
     var loadImages = function(iImageKeys, callback, params)
@@ -223,7 +385,10 @@ var Client = (function(window) {
 
     var hostLoadCauseLocSceneImgs = function()
     {
-        var keys = gameState.causeOfDeathKeys.concat(gameState.locationKeys).concat(gameState.sceneKeys).concat(gameState.badgeKeys).concat(gameState.bulletKeys);
+        var keys = gameState.causeOfDeathKeys.concat(gameState.locationKeys);
+        keys = keys.concat(gameState.sceneKeys);
+        keys = keys.concat(gameState.badgeKeys);
+        keys = keys.concat(gameState.bulletKeys);
 
         var sixKeys = keys.slice(0,6); 
         var keysTotal = sixKeys.concat(fillArray(gameState.bulletKeys[0], 6));
