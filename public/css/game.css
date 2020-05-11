@@ -1,0 +1,23 @@
+body {
+    background: url(/img/concrete_1920x1280_top_let_low_quality.png);
+    /* background-size: cover;	 */
+  }
+
+#startGame {
+    width: 300px;
+    position: absolute; 
+    margin: 0 auto;
+    left: 90%;
+    top: 97%;
+    -webkit-transform: translate(-50%, -50%); 
+    translate: -50% -50%;
+}
+
+#drawSceneCard {
+  position: absolute; 
+  margin: 0 auto;
+  left: 95%;
+  top: 95%;
+  -webkit-transform: translate(-50%, -50%); 
+  translate: -50% -50%;
+}

@@ -1,0 +1,32 @@
+extends layout
+
+append scripts
+    link(href="/css/game.css", rel="stylesheet")
+
+block content
+
+    #container(style='position: absolute') 
+    #startGame
+      //- #playerNameDiv Player Name: #{playerName}
+      //- #isHost Is Host: #{isHost}
+      //- #role Role: #{role}
+      //- #gameIdDiv Game ID: #{gameID}
+      button#bttnStartGame(type='button', style='float:left') Start Game
+      button#bttnDrawSceneCard(type='button', style='float:left') Draw Scene Card
+    script(src='https://cdn.socket.io/socket.io-1.7.3.js')
+    script(src='https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js')
+    script(src='https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js')
+    script(src='/js/jquery.ui.touch-punch.min.js')
+    script(src='https://unpkg.com/konva@4.2.2/konva.min.js')
+    script(src='/js/mykonvas.js')
+    script(src='/js/client.js')
+    script.
+      $(document).ready(function() {
+        //- FastClick.attach(document.body);
+        window.Client.init({
+          gameID      : "#{gameID}",
+          playerName  : "#{playerName}",
+          isHost      : "#{isHost}",
+          role        : "#{role}"
+        });
+      });
