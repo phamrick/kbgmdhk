@@ -241,7 +241,8 @@ var Client = (function(window) {
             if(id === gameState.r_fsci || 
                 id === gameState.r_mrd ||
                 id === gameState.r_wtnss ||
-                id === gameState.r_invst)
+                id === gameState.r_invst ||
+                id === gameState.r_accmp)
             {
                 kimg.hide();
             }
