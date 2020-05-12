@@ -124,24 +124,25 @@ var myKonvas = (function() {
       callBack(text);
   }
 
-  var InstantiateRectText = function(iText, iX, iY, iWidth, iFontSize, callBack)
+  var InstantiateRectText = function(iText, iX, iY, iWidth, iFontSize, iBgcolor, iFontColor, iBorderColor, callBack)
   {
     var ktext = new Konva.Text({
-      x: iX,
-      y: iY,
+      x: iX + 5,
+      y: iY + 2,
       text:iText,
       fontSize: iFontSize,
-      fill: 'black',
-      // width: iWidth,
-      padding: 2
+      fill: iFontColor,
+      fontStyle: 'bold',
+      padding: 2,
+      fontFamily: 'Courier New'
     });
-
+    
     var rect = new Konva.Rect({
       x: iX,
       y: iY,
-      stroke: '#555',
+      stroke: iBorderColor,
       strokeWidth: 3,
-      fill: 'white',
+      fill: iBgcolor,
       width: iWidth,
       height: ktext.height(),
       shadowColor: 'black',
@@ -165,10 +166,10 @@ var myKonvas = (function() {
   var InstaniateImgGridGroup = function(iImgKeys, iX, iY, iWrapCount, iCentered, iDraggable, callBack)
   {
     var group = new Konva.Group({
-      x: 0,
-      y: 0,
-      draggable: iDraggable
-      });
+        x: 0,
+        y: 0,
+        draggable: iDraggable
+    });
 
     var callBackParam = {
       param :{

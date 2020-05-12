@@ -111,6 +111,7 @@ var joinGame = function(req, res) {
 
   // Create a new session
   req.session.regenerate(function(err) {
+
     if (err) { res.redirect('/'); return; }
 
     // Validate form input
@@ -129,6 +130,7 @@ var joinGame = function(req, res) {
 
     // Redirect to game page
     res.redirect('/game/'+validData.gameID);
+
   });
 };
 

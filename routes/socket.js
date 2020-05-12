@@ -44,6 +44,10 @@ var join = function(gameID) {
   // Add user to a socket.io "room" that matches the game ID
   this.join(gameID);
 
+  game.updateEvt = game.evt_type_playerjoined;
+
+  IO.sockets.in(gameID).emit('update', game);
+
   // Emit the update event to everyone in this room/game
   //IO.sockets.in(gameID).emit('update', game);
 
