@@ -280,6 +280,183 @@ var myKonvas = (function() {
 
     if (callBackParam)
       callBackParam.callBack(callBackParam.param, oKimg);
+      //callBackParam.callBack(oKimg);
+  }
+
+  var InstaniateImgGridGroup2 = function(iImgKeys, iX, iY, iWrapCount, iCentered, iDraggable, iGroupPerImage)
+  {
+    var kgrid = InstantiateImgGrid2(iImgKeys, iX, iY, iWrapCount, iCentered, false, false, false);
+
+    var groups = [];
+
+    if (!iGroupPerImage)
+    {
+      var group = new Konva.Group({ x: 0, y: 0, draggable: iDraggable });
+
+      var i = 0;
+      for(i = 0; i < kgrid.kimgs.length; i++)
+        group.add(kgrid.kimgs[i]);
+
+      groups.push(group);
+
+    } else {
+
+      var i = 0;
+      for(i = 0; i < kgrid.kimgs.length; i++)
+      {
+        var kimg = kgrid.kimgs[i];
+        // if (iIndvGroupsForThese.includes(kimg.id()))
+        // {
+          group = new Konva.Group({ x: 0, y: 0, draggable: iDraggable });
+          group.add(kimg);
+          group.id('group_' + kimg.id());
+          groups.push(group);
+          
+        // } else {
+        //   if (iDraggable) kimg.draggable(true);
+        //   AddKobjToPiecesLayer(kimg, true);
+        // }
+      }
+    }
+
+    AddKobjsToPiecesLayer(groups, true);
+
+    return { groups: groups, kimgs: kgrid.kimgs, width: kgrid.width, height: kgrid.height};
+  }
+
+  var InstantiateImgGrid2 = function(iImgKeys, iX, iY, iWrapCount, iCentered, iAddToLayer, iDraggable, iDrawLayer)
+  {
+    var rowCount = Math.floor(iImgKeys.length / iWrapCount);
+
+    var widthreturn = 0;
+    var heightreturn = 0;
+
+    var kimgsTotal = [];
+
+    while(rowCount > 0)
+    {
+      var row = iImgKeys.splice(0, iWrapCount);
+
+      var karray = InstantiateImgArray2(row, iX, iY + heightreturn, true, iCentered, false, iDraggable, false);
+      kimgsTotal = kimgsTotal.concat(karray.kimgs);
+
+      if (karray.width > widthreturn)
+        widthreturn = karray.width;
+      
+      heightreturn = heightreturn + karray.height;
+
+      rowCount--;
+    }
+    
+    if (iImgKeys.length > 0) {
+
+      var karray = InstantiateImgArray2(iImgKeys, iX, iY + heightreturn, true, iCentered, false, iDraggable, false);
+      kimgsTotal = kimgsTotal.concat(karray.kimgs);
+
+      if (karray.width > widthreturn)
+        widthreturn = karray.width;
+      
+      heightreturn = heightreturn + karray.height;
+    }
+
+    if (iAddToLayer)
+      AddKobjsToPiecesLayer(kimgs, iDrawLayer);
+
+    return { kimgs: kimgsTotal, width: widthreturn, height: heightreturn };
+  }
+
+  var InstantiateImgArray2 = function(iImgKeys, iX, iY, iXdir, iCentered, iAddToLayer, iDraggable, iDrawLayer)
+  {
+    var i = 0;
+    var xOffset = 0;
+    var yOffset = 0;
+
+    var widthKeep = 0;
+    var heightKeep = 0;
+
+    var kimgs = [];
+
+    while(i < iImgKeys.length)
+    {
+      var imageDOM = Client.images[iImgKeys[i]];
+
+      if (imageDOM.width > widthKeep)
+        widthKeep = imageDOM.width;
+      if (imageDOM.height > heightKeep)
+        heightKeep = imageDOM.height;
+
+      var kimg = InstantiateImg2(imageDOM, iX + xOffset, iY + yOffset, iCentered, iDraggable, false, false);
+      kimgs.push(kimg);
+
+      if(iXdir === true)
+      {
+        xOffset = xOffset + imageDOM.width;
+      } else {
+        yOffset = yOffset + imageDOM.height;
+      }
+
+      i++;
+    }
+
+    if (iAddToLayer)
+      AddKobjsToPiecesLayer(kimgs, iDrawLayer);
+
+    if (iDrawLayer)
+      layerPieces.draw();
+
+    return { kimgs: kimgs, width: widthKeep, height: heightKeep };
+  } 
+
+  var InstantiateSingleImg2 = function(iImgKey,iX, iY, iCentered, iDraggable, iAddToLayer, iDrawLayer)
+  {
+    var imageDOM = Client.images[iImgKey];
+    var kimg = InstantiateImg2(imageDOM, iX, iY, iCentered, iDraggable, iAddToLayer, iDrawLayer);
+    return kimg;
+  }
+
+  var InstantiateImg2 = function (imageDOM, iX, iY, iCentered, iDraggable, iAddToLayer, iDrawLayer)
+  {
+    iX = utils.ConvXpercXpos(iX);
+    iY = utils.ConvYpercYpos(iY);
+
+    var oKimg = new Konva.Image({
+      image: imageDOM,
+      x: parseInt(iX) + (iCentered ? (-imageDOM.width/2): 0),
+      y: parseInt(iY) + (iCentered ? (-imageDOM.height/2): 0),
+      id: getFilenameNoExt(imageDOM.src),
+      draggable: iDraggable
+    });
+
+    if( iAddToLayer == true)
+      layerPieces.add(oKimg);
+
+    if (iDraggable)
+    {
+       oKimg.on('click', EvtNodeTopMostAndSelected);
+       oKimg.on('dragstart', EvtDragStart);
+    }
+
+    if (iDrawLayer === true)
+      layerPieces.draw();
+
+    return oKimg;
+  }
+
+  var AddKobjsToPiecesLayer = function(iKobjs, iDrawLayer)
+  {
+    var i = 0;
+    for (i = 0; i < iKobjs.length; i++) {
+      AddKobjToPiecesLayer(iKobjs[i], false);
+    }
+    if(iDrawLayer)
+      layerPieces.draw();
+  }
+
+  var AddKobjToPiecesLayer = function(iKobj, iDrawLayer)
+  {
+    layerPieces.add(iKobj);
+    if(iDrawLayer)
+      layerPieces.draw();
   }
 
   function getFilenameNoExt (iFilePath) {
@@ -503,7 +680,51 @@ var myKonvas = (function() {
     stage.draw();
   }
 
+  var ResizeStageToFitPieces = function(iNodes)
+  {
+    var i = 0;
+    var maxX = stage.width();
+    var maxY = stage.height();
+
+    for(i= 0; i< iNodes.length; i++)
+    {
+      var node = iNodes[i];
+      var x = node.x() + node.width();
+      var y = node.y() + node.height();
+      if(x > maxX)
+        maxX = x;
+      if(y > maxY)
+        maxY = y;
+    }
+
+    stage.width(maxX);
+    stage.height(maxY);
+  }
+
+  var GetPointerPos = function()
+  {
+    var touchPos = stage.getPointerPosition()
+    return { x: touchPos.x, y: touchPos.y};
+  }
+
+  var AddNodeToPiecesLayer = function(iNode)
+  {
+    layerPieces.add(iNode);
+    layerPieces.draw();
+  }
+
+  var GetNodeFromPiecesLayer = function(id)
+  {
+    var children = layerPieces.getChildren(function(node){
+      return node.id() === id;
+    });
+
+    return children[0];
+
+  }
+
   return {
+    layerPieces: layerPieces,
     CreateStage: CreateStage,
     CreatePieces: CreatePieces,
     InstantiateSingleImg: InstantiateSingleImg,
@@ -514,7 +735,17 @@ var myKonvas = (function() {
     InstaniateImgGridGroup: InstaniateImgGridGroup,
     InstaniateText: InstaniateText,
     InstantiateRectText: InstantiateRectText,
-    RunCallbackOnPiecesLayer: RunCallbackOnPiecesLayer
+    RunCallbackOnPiecesLayer: RunCallbackOnPiecesLayer,
+
+    InstaniateImgGridGroup2: InstaniateImgGridGroup2,
+    InstantiateImgGrid2: InstantiateImgGrid2,
+    InstantiateImgArray2: InstantiateImgArray2,
+    InstantiateSingleImg2: InstantiateSingleImg2,
+    InstantiateImg2: InstantiateImg2,
+    ResizeStageToFitPieces: ResizeStageToFitPieces,
+    GetPointerPos: GetPointerPos,
+    AddNodeToPiecesLayer: AddNodeToPiecesLayer,
+    GetNodeFromPiecesLayer: GetNodeFromPiecesLayer
   };
 
 })();

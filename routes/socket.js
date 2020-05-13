@@ -161,6 +161,55 @@ var disconnect = function() {
   console.log('Socket '+this.id+' disconnected');
 };
 
+/**
+ * check added
+ */
+var checkAdded = function(data) {
+
+  var sess = this.request.session;
+
+  var debugInfo = {
+    socketID : this.id,
+    event    : 'checkadded',
+    gameID   : data.gameID,
+    session  : sess
+  };
+
+  // Check if user has permission to access this game
+  if (data.gameID !== sess.gameID) {
+    console.log('ERROR: Access Denied', debugInfo);
+    this.emit('error', {message: "You cannot join this game"});
+    return;
+  }
+
+  IO.sockets.in(data.gameID).emit('checkadded', data);
+}
+
+/**
+ * check removed
+ */
+var checkRemoved = function(data) {
+  var sess = this.request.session;
+
+  var debugInfo = {
+    socketID : this.id,
+    event    : 'checkremoved',
+    gameID   : data.gameID,
+    session  : sess
+  };
+
+  // Check if user has permission to access this game
+  if (data.gameID !== sess.gameID) {
+    console.log('ERROR: Access Denied', debugInfo);
+    this.emit('error', {message: "You cannot join this game"});
+    return;
+  }
+
+  IO.sockets.in(data.gameID).emit('checkremoved', data);
+
+  //socket.emit('checkremoved', { gameID: gameID, sceneCardId: group.id(), checkId: id});
+}
+
 
 /**
  * Attach route/event handlers for socket.io
@@ -177,7 +226,8 @@ exports.attach = function(io, db) {
     socket.on('disconnect', disconnect);
     socket.on('assignroles', assignRoles);
     socket.on('murdercardschosen', murderCardsChosen);
+    socket.on('checkadded', checkAdded);
+    socket.on('checkremoved', checkRemoved);
 
-    console.log('Socket '+socket.id+' connected');
   });
 };

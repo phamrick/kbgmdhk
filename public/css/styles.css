@@ -17,6 +17,10 @@ table { border-collapse: collapse; }
 
 #game { width: 400px; margin: 0 auto 0 auto; }
 
+#gameID {
+  text-transform: uppercase;
+}
+
 /*
  * Title Bar
  */

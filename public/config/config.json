@@ -337,6 +337,10 @@
 
 		  "imgSrcBadge" : {
 			"badge" : "badge.png"
+		  },
+
+		  "imgSrcCheckMark" : {
+			"checkmark" : "checkmark.png"
 		  }
 	  }
 	  

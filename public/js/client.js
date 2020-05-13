@@ -21,7 +21,11 @@ var Client = (function(window) {
     var myMeansChosen = '';
     var myEvidenceChosen = '';
 
-    var playerCount = 0;
+    var checkMarkCount = 1;
+
+    var timeout;
+    var longtouch;
+    var longtouchblacktap = false;
 
     var sceneCount = 5;
 
@@ -90,7 +94,7 @@ var Client = (function(window) {
      * Attach Socket.IO event handlers
      */
     var attachSocketEventHandlers = function() {
-  
+
         // Update UI with new game state
         socket.on('update', function(data) {
 
@@ -109,6 +113,9 @@ var Client = (function(window) {
                     // document.getElementById('role').innerHTML = "Role: " + role;
 
                     instCardsPrivate(gsPlayer);
+
+                    if (role === gameState.r_fsci)
+                        forSciCauseLocSceneImgs();
 
                 } else {
                     instCardsPublic();
@@ -141,6 +148,18 @@ var Client = (function(window) {
                 }
             }
 
+        });
+
+        socket.on('checkadded', function(data) {
+
+            if (isHost === true)
+                createCheckMarkHost(data.sceneCardId, data.x, data.y);
+        });
+
+        socket.on('checkremoved', function(data) {
+
+            if (isHost === true)
+                removeCheckMarkHost(data.sceneCardId, data.checkId);
         });
 
     };
@@ -401,7 +420,8 @@ var Client = (function(window) {
 				loadedImages++;
 				console.log('loadedImages: ' + loadedImages.toString());
 				if (loadedImages >= iImageKeys.length) {
-                    callback(params);
+                    if(callback)
+                        callback(params);
                 }
             }
             images[keySrc].src = "/img/" + keySrc + ".png";
@@ -409,31 +429,165 @@ var Client = (function(window) {
         }
     }
 
-    var hostLoadCauseLocSceneImgs = function()
+    var forSciCauseLocSceneImgs = function()
     {
         var keys = gameState.causeOfDeathKeys.concat(gameState.locationKeys);
         keys = keys.concat(gameState.sceneKeys);
-        keys = keys.concat(gameState.badgeKeys);
-        keys = keys.concat(gameState.bulletKeys);
+        keys = keys.slice(0,6); 
 
-        var sixKeys = keys.slice(0,6); 
-        var keysTotal = sixKeys.concat(fillArray(gameState.bulletKeys[0], 6));
+        var checkMarkKey = gameState.checkMarkKeys[0];
+
+        var instantiateFirstSixCards = function(params)
+        {
+            var kobjs = myKonvas.InstaniateImgGridGroup2(keys, -10, 200, 2, false, false, true);
+            var i = 0;
+            for(i = 0; i < kobjs.kimgs.length; i++)
+            {
+                var createCheckmark = function(e) {
+                    if (longtouchblacktap)
+                        return;
+
+                    var nodeImg = e.target;
+                    var group = nodeImg.getParent();
+
+                    var x = e.evt.clientX;
+                    var y = e.evt.clientY;
+
+                    if (isMobile === true)
+                    {
+                        var touchpos = myKonvas.GetPointerPos();
+
+                        x = touchpos.x;
+                        y = touchpos.y;
+                    }
+
+                    var kimg = myKonvas.InstantiateSingleImg2(checkMarkKey, x, y, false, false, false, false);
+                    kimg.move(   {   x: -kimg.width()*.25,   y: -kimg.height()*.8  }  );
+
+                    var newID = kimg.id() + '_' + checkMarkCount.toString();
+                    kimg.id( newID);
+
+                    checkMarkCount++;
+
+                    kimg.on('click tap', function(e) {
+                        var id = e.target.id();
+                        var targetLayer = e.target.getLayer();
+                        e.target.destroy();
+                        targetLayer.draw();
+                        socket.emit('checkremoved', { gameID: gameID, sceneCardId: group.id(), checkId: id});
+                    });
+
+                    //myKonvas.AddNodeToPiecesLayer(kimg);
+
+                    group.add(kimg);
+                    kimg.moveToTop()
+                    var layer = group.getLayer();
+                    layer.draw();
+
+                    var relx = x - nodeImg.x();
+                    var rely = y - nodeImg.y();
+
+                    socket.emit('checkadded', { gameID: gameID, sceneCardId: group.id(), x: relx, y: rely });
+                }
+
+                kobjs.kimgs[i].on('click tap', createCheckmark);
+                //kobjs.kimgs[i].on('dbltap', createCheckmark);
+         
+                kobjs.kimgs[i].on('touchstart', function(e) {
+                    timeout = setTimeout(function() {
+                    longtouch = true;
+                    }, 1000);
+                });
+
+                kobjs.kimgs[i].on('touchend', function(e) {
+                    if (longtouch) {
+                        longtouchblacktap = true;
+                        alert('do you want to draw a scene card?');
+                    }
+
+                    longtouch = false;
+                    clearTimeout(timeout);
+                    setTimeout(function() {
+                        longtouchblacktap = false;
+                    }, 500);
+                });
+            }
+
+            myKonvas.ResizeStageToFitPieces(kobjs.kimgs);
+        }
+
+        loadImages(gameState.checkMarkKeys, null, null);
+        loadImages(keys, instantiateFirstSixCards, null);
+    }
+
+    var removeCheckMarkHost = function(iSceneID, iCheckId)
+    {
+        var group = myKonvas.GetNodeFromPiecesLayer(iSceneID);
+        var children = group.getChildren().toArray();
 
         var i = 0;
-        for(var playerKey in gameState.players)
+        for(i = 0; i < children.length; i++)
         {
-            i++;
-            keysTotal = keysTotal.concat(gameState.badgeKeys[0]);
+            var node = children[i];
+            if(node.id() === iCheckId)
+                node.destroy();
         }
+
+        group.getLayer().draw();
+    }
+
+    var createCheckMarkHost = function(iSceneID, iRelX, iRelY)
+    {
+        var group = myKonvas.GetNodeFromPiecesLayer(iSceneID);
+        var kimg = group.getChildren().toArray()[0];
+
+        var checkMarkKey = gameState.checkMarkKeys[0];
+
+        var kimgCheck = myKonvas.InstantiateSingleImg2(checkMarkKey, kimg.x() + iRelX, kimg.y() + iRelY, false, false, false, false);
+        kimgCheck.move(   {   x: -kimgCheck.width()*.25,   y: -kimgCheck.height()*.8  }  );
+
+        var newID = kimgCheck.id() + '_' + checkMarkCount.toString();
+        kimgCheck.id( newID);
+
+        checkMarkCount++;
+
+        group.add(kimgCheck);
+        kimgCheck.moveToTop()
+        var layer = group.getLayer();
+        layer.draw();
+    }
+
+    var hostLoadCauseLocSceneImgs = function()
+    {
+        var playercount = Object.keys(gameState.players).length;
+
+        var keysTotal = gameState.causeOfDeathKeys;
+        keysTotal = keysTotal.concat(gameState.locationKeys);
+        keysTotal = keysTotal.concat(gameState.sceneKeys).slice(0,6);
+        keysTotal = keysTotal.concat(gameState.badgeKeys);
+        keysTotal = keysTotal.concat(fillArray(gameState.badgeKeys[0], playercount));
+
+        var firstSixKeys = keysTotal.slice(0,6); 
+
+        var badgeKey = gameState.badgeKeys[0];
 
         var cardWidth = 180;
 
         var instantiateFirstSixCards = function(params)
         {
-            myKonvas.InstantiateImgGrid(keysTotal, screen.width - 3*cardWidth,  10, 3, false, true, true, null);
+            myKonvas.InstaniateImgGridGroup2(firstSixKeys, screen.width - 3*cardWidth, 10, 3, false, true, true);
+            var i = 0;
+            for(i = 0; i < playercount; i++)
+            {
+                var badge = myKonvas.InstantiateSingleImg2(badgeKey, screen.width, screen.height, false, true, true, true);
+                badge.move( {   x: -badge.width() - 5,   y: -badge.height() - 5  }  );
+                badge.getLayer().draw();
+            }
         }
 
-        loadImages(keys, instantiateFirstSixCards, keysTotal);
+        loadImages(gameState.checkMarkKeys, null, null);
+        loadImages(keysTotal, instantiateFirstSixCards, null);
+        
     }
 
     function fillArray(value, len) {

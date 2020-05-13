@@ -35,7 +35,7 @@ var validateJoinGame = function(req) {
   if (/^\s*$/.test(req.body['game-id'])) { return null; }
 
   return {
-    gameID      : req.body['game-id'].toLowerCase(),
+    gameID      : req.body['game-id'].toUpperCase(),
     playerName  : req.body['player-name']
   };
 };
