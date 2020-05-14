@@ -7,6 +7,15 @@ if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(naviga
   isMobile = true;
 }
 
+$(window).scroll(function () { 
+    if($(this).scrollTop() > 50) // change 50 to what you want (work out how far the nav is from the top of the page alraedy and add it there, that'll make it smoother transition)
+    {
+        $('#fsciFloating').addClass('scrolling');
+    } else {
+        $('#fsciFloating').removeClass('scrolling');
+    }
+});
+
 var Client = (function(window) {
 
     var socket      = null;
@@ -25,7 +34,8 @@ var Client = (function(window) {
 
     var timeout;
     var longtouch;
-    var longtouchblacktap = false;
+    var longtouchblocktap = false;
+    var scenedragblock = false;
 
     var sceneCount = 5;
 
@@ -70,17 +80,17 @@ var Client = (function(window) {
 
         $('#bttnDrawSceneCard').click(function(ev) {
 
-            var sceneKeys = [gameState.sceneKeys[sceneCount]];
+            // var sceneKeys = [gameState.sceneKeys[sceneCount]];
 
-            var instantiateSceneCard = function(params)
-            {
-                //myKonvas.InstantiateImgArray(sixKeys, screen.width/2, screen.height/2, true, false, true, true, null);
-                myKonvas.InstantiateImgGrid(sceneKeys, screen.width/2,  screen.height/2 - 200, 6, false, true, true, null);
-            }
+            // var instantiateSceneCard = function(params)
+            // {
+            //     //myKonvas.InstantiateImgArray(sixKeys, screen.width/2, screen.height/2, true, false, true, true, null);
+            //     myKonvas.InstantiateImgGrid(sceneKeys, screen.width/2,  screen.height/2 - 200, 6, false, true, true, null);
+            // }
 
-            loadImages(sceneKeys, instantiateSceneCard, sceneKeys);
+            // loadImages(sceneKeys, instantiateSceneCard, sceneKeys);
 
-            sceneCount++;
+            // sceneCount++;
         });
 
         if(isHost === false)
@@ -129,9 +139,15 @@ var Client = (function(window) {
                     if(role === gameState.r_fsci)
                     {
                         var imgKeys = [gameState.meansChosen, gameState.evidenceChosen];
-                        loadImages(imgKeys, function(params) {
+                        // loadImages(imgKeys, function(params) {
 
-                            myKonvas.InstantiateImgArray(imgKeys, 140, 70, true, false, true, true, null);
+                        //     myKonvas.InstantiateImgArray(imgKeys, 140, 70, true, false, true, true, null);
+                        // }, 
+                        // null);
+
+                        loadImages(imgKeys, function(params) {
+ 
+                            $('#fsciFloating').html('<img src="' + "/img/" + gameState.meansChosen + ".png" + '"><img src="' + "/img/" + gameState.evidenceChosen  + ".png" + '">');
                         }, 
                         null);
                         
@@ -161,6 +177,21 @@ var Client = (function(window) {
             if (isHost === true)
                 removeCheckMarkHost(data.sceneCardId, data.checkId);
         });
+
+        socket.on('drawnewscenecard', function(data) {
+
+            if (isHost === true)
+            {
+                var groupSceneReplace = myKonvas.GetNodeFromPiecesLayer(data.sceneCardId);
+                var groupChildren = groupSceneReplace.getChildren(function(node){
+                    return node.id().startsWith("scene");
+                  })
+                var sceneImage = groupChildren[0];
+                drawNewSceneCard(sceneImage, false);
+            }
+        });
+        
+        
 
     };
 
@@ -323,41 +354,47 @@ var Client = (function(window) {
         var x = 140;
         var y = 350;
 
+        var n = "\n";
+
+        var mrd_colon = "murderer: ";
+        var accm_colon= "accmplce: ";
+        var wtnss_colon="witness: ";
+
         if (role === gameState.r_fsci)
         {
-            infoMurd = "murderer:     " + playerMurd;
-            infoAccm = playerAccm.length > 0 ? "\naccomplice:  "   + playerAccm : "";
-            infoWtnss = playerwitness.length > 0 ? "\nwitness:       " + playerwitness : "";
+            infoMurd = mrd_colon + playerMurd;
+            infoAccm = playerAccm.length > 0 ? n + accm_colon   + playerAccm : "";
+            infoWtnss = playerwitness.length > 0 ? n + wtnss_colon + playerwitness : "";
 
-            y = 10;
+            y = 170;
 
         } else if (role === gameState.r_mrd) {
 
-            infoAccm = playerAccm.length > 0 ? "accomplice:  "   + playerAccm : "";
-            infoWtnss = playerwitness.length > 0 ? "\nwitness:       " + q : "";
+            infoAccm = playerAccm.length > 0 ? accm_colon + playerAccm : "";
+            infoWtnss = playerwitness.length > 0 ? n + wtnss_colon + q : "";
 
             if(infoAccm.length === 0 && infoWtnss.length === 0)
                 infoMurd = "all other players\nare investigators";
 
         } else if (role === gameState.r_accmp)
         {
-            infoMurd = "murderer:     " + playerMurd;
-            infoWtnss = playerwitness.length > 0 ? "\nwitness:       " + q : "";
+            infoMurd = mrd_colon + playerMurd;
+            infoWtnss = playerwitness.length > 0 ? n + wtnss_colon + q : "";
 
         } else if (role === gameState.r_wtnss) {
-            infoMurd = "murderer:     " + playerMurd;
-            infoAccm = playerAccm.length > 0 ? "\naccomplice:  "   + playerAccm : "";
+            infoMurd = mrd_colon + playerMurd;
+            infoAccm = playerAccm.length > 0 ? n + accm_colon + playerAccm : "";
         } else {
-            infoMurd = "murderer:     " + q;
-            infoAccm = playerAccm.length > 0 ? "\naccomplice:  "   + q : "";
-            infoWtnss = playerwitness.length > 0 ? "\nwitness:       " + q : "";
+            infoMurd = mrd_colon + q;
+            infoAccm = playerAccm.length > 0 ? n + accm_colon + q : "";
+            infoWtnss = playerwitness.length > 0 ? n + wtnss_colon + q : "";
         }
 
         // var fontSize = isMobile === false ? 30: 20;
         var width = isMobile === false ? 250: 225;
 
         myKonvas.InstantiateRectText(infoMurd + infoAccm + infoWtnss, 
-                                    x, y, width, 20, '#ffffb3', '#4d2600', '#e60000',null);
+                                    x, y, width, 18, '#ffffb3', '#4d2600', '#e60000',null);
                                     
         myKonvas.RunCallbackOnPiecesLayer(showRoleKimg);
     }
@@ -431,93 +468,140 @@ var Client = (function(window) {
 
     var forSciCauseLocSceneImgs = function()
     {
-        var keys = gameState.causeOfDeathKeys.concat(gameState.locationKeys);
-        keys = keys.concat(gameState.sceneKeys);
-        keys = keys.slice(0,6); 
+        var keysTotal = gameState.causeOfDeathKeys.concat(gameState.locationKeys);
+        keysTotal = keysTotal.concat(gameState.sceneKeys);
+        var keysFirstSix = keysTotal.slice(0,6); 
+
+        loadImages(gameState.checkMarkKeys, null, null);
+        loadImages(keysTotal, instantiateFirstSixCards, keysFirstSix);
+    }
+
+    var instantiateFirstSixCards = function(keys)
+    {
+        var kobjs = myKonvas.InstaniateImgGridGroup2(keys, -15, 260, 2, false, false, true);
+        var i = 0;
+
+        if(!isHost) 
+            for(i = 0; i < kobjs.kimgs.length; i++)
+                createCheckMarkAndSceneTouchEvents(kobjs.kimgs[i]);
+
+        myKonvas.ResizeStageToFitPieces(kobjs.kimgs);
+    }
+
+    var createCheckMarkAndSceneTouchEvents = function(iKimg)
+    {
+        //iKimg.on('click tap', createCheckmark);
+ 
+        iKimg.on('mousedown touchstart', function(e) {
+            console.log("scene mousedown");
+            timeout = setTimeout(function() {
+                longtouch = true;
+            }, 1000);
+        });
+
+        iKimg.on('dragstart', function(e) {
+            console.log("scene dragstart");
+            scenedragblock = true;
+        });
+
+        iKimg.on('dragmove', function(e) {
+            console.log("scene dragmove");
+        });
+
+        iKimg.on('dragend', function(e) {
+            console.log("scene dragend");
+            scenedragblock = false;
+        });
+
+        iKimg.on('mouseup touchend', function(e) {
+            console.log("scene mouseup");
+            if (longtouch && !scenedragblock) {
+                longtouchblocktap = true;
+                if(e.target.id().startsWith('scene'))
+                    if(confirm('do you want to draw a scene card?'))
+                    {
+                        drawNewSceneCard(e.target, true);
+                    }
+            } else if (!scenedragblock) {
+                createCheckmark(e);
+            }
+
+            longtouch = false;
+            clearTimeout(timeout);
+            setTimeout(function() {
+                longtouchblocktap = false;
+            }, 500);
+        });
+    }
+
+    var createCheckmark = function(e) {
 
         var checkMarkKey = gameState.checkMarkKeys[0];
 
-        var instantiateFirstSixCards = function(params)
+        if (longtouchblocktap)
+            return;
+
+        var nodeImg = e.target;
+        var group = nodeImg.getParent();
+
+        var x = e.evt.offsetX;
+        var y = e.evt.offsetY;
+
+        if (isMobile === true)
         {
-            var kobjs = myKonvas.InstaniateImgGridGroup2(keys, -10, 200, 2, false, false, true);
-            var i = 0;
-            for(i = 0; i < kobjs.kimgs.length; i++)
-            {
-                var createCheckmark = function(e) {
-                    if (longtouchblacktap)
-                        return;
+            var touchpos = myKonvas.GetPointerPos();
 
-                    var nodeImg = e.target;
-                    var group = nodeImg.getParent();
-
-                    var x = e.evt.clientX;
-                    var y = e.evt.clientY;
-
-                    if (isMobile === true)
-                    {
-                        var touchpos = myKonvas.GetPointerPos();
-
-                        x = touchpos.x;
-                        y = touchpos.y;
-                    }
-
-                    var kimg = myKonvas.InstantiateSingleImg2(checkMarkKey, x, y, false, false, false, false);
-                    kimg.move(   {   x: -kimg.width()*.25,   y: -kimg.height()*.8  }  );
-
-                    var newID = kimg.id() + '_' + checkMarkCount.toString();
-                    kimg.id( newID);
-
-                    checkMarkCount++;
-
-                    kimg.on('click tap', function(e) {
-                        var id = e.target.id();
-                        var targetLayer = e.target.getLayer();
-                        e.target.destroy();
-                        targetLayer.draw();
-                        socket.emit('checkremoved', { gameID: gameID, sceneCardId: group.id(), checkId: id});
-                    });
-
-                    //myKonvas.AddNodeToPiecesLayer(kimg);
-
-                    group.add(kimg);
-                    kimg.moveToTop()
-                    var layer = group.getLayer();
-                    layer.draw();
-
-                    var relx = x - nodeImg.x();
-                    var rely = y - nodeImg.y();
-
-                    socket.emit('checkadded', { gameID: gameID, sceneCardId: group.id(), x: relx, y: rely });
-                }
-
-                kobjs.kimgs[i].on('click tap', createCheckmark);
-                //kobjs.kimgs[i].on('dbltap', createCheckmark);
-         
-                kobjs.kimgs[i].on('touchstart', function(e) {
-                    timeout = setTimeout(function() {
-                    longtouch = true;
-                    }, 1000);
-                });
-
-                kobjs.kimgs[i].on('touchend', function(e) {
-                    if (longtouch) {
-                        longtouchblacktap = true;
-                        alert('do you want to draw a scene card?');
-                    }
-
-                    longtouch = false;
-                    clearTimeout(timeout);
-                    setTimeout(function() {
-                        longtouchblacktap = false;
-                    }, 500);
-                });
-            }
-
-            myKonvas.ResizeStageToFitPieces(kobjs.kimgs);
+            x = touchpos.x;
+            y = touchpos.y;
         }
 
-        loadImages(gameState.checkMarkKeys, null, null);
-        loadImages(keys, instantiateFirstSixCards, null);
+        var kimg = myKonvas.InstantiateSingleImg2(checkMarkKey, x, y, false, false, false, false);
+        kimg.move(   {   x: -kimg.width()*.25,   y: -kimg.height()*.8  }  );
+
+        var newID = kimg.id() + '_' + checkMarkCount.toString();
+        kimg.id( newID);
+
+        checkMarkCount++;
+
+        kimg.on('click tap', function(e) {
+            var id = e.target.id();
+            var targetLayer = e.target.getLayer();
+            e.target.destroy();
+            targetLayer.draw();
+            socket.emit('checkremoved', { gameID: gameID, sceneCardId: group.id(), checkId: id});
+        });
+
+        group.add(kimg);
+        kimg.moveToTop()
+        var layer = group.getLayer();
+        layer.draw();
+
+        var relx = x - nodeImg.x();
+        var rely = y - nodeImg.y();
+
+        socket.emit('checkadded', { gameID: gameID, sceneCardId: group.id(), x: relx, y: rely });
+    }
+
+    var drawNewSceneCard = function(iReplaceThis, emit)
+    {
+        var keys = [gameState.sceneKeys[sceneCount]];
+
+        var kobjs = myKonvas.InstaniateImgGridGroup2(keys, iReplaceThis.x(), iReplaceThis.y(), 1, false, isHost, true);
+        var kimg = kobjs.kimgs[0];
+        //var group = kobjs.groups[0];
+
+        var groupReplaceID = iReplaceThis.getParent().id();
+        iReplaceThis.destroy();
+
+        if(!isHost)
+            createCheckMarkAndSceneTouchEvents(kimg);
+
+        sceneCount++;
+
+        if(emit)
+            socket.emit('drawnewscenecard', { gameID: gameID, sceneCardId: groupReplaceID});
+
+        kimg.getLayer().draw();
     }
 
     var removeCheckMarkHost = function(iSceneID, iCheckId)
@@ -563,7 +647,7 @@ var Client = (function(window) {
 
         var keysTotal = gameState.causeOfDeathKeys;
         keysTotal = keysTotal.concat(gameState.locationKeys);
-        keysTotal = keysTotal.concat(gameState.sceneKeys).slice(0,6);
+        keysTotal = keysTotal.concat(gameState.sceneKeys);
         keysTotal = keysTotal.concat(gameState.badgeKeys);
         keysTotal = keysTotal.concat(fillArray(gameState.badgeKeys[0], playercount));
 

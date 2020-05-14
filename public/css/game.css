@@ -3,6 +3,12 @@ body {
     /* background-size: cover;	 */
   }
 
+.floatImgTop {
+  position: fixed;
+  top: 5;
+  left: 60;
+}
+
 #startGame {
     width: 300px;
     position: absolute; 
