@@ -46,3 +46,8 @@ table { border-collapse: collapse; }
 #pawn-promotion label { font-size: 30px; line-height: 30px; }
 
 
+@media (pointer:none), (pointer:coarse) {
+  #startDiv {
+    display: none;
+  }
+}

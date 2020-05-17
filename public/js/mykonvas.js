@@ -8,12 +8,12 @@ var myKonvas = (function() {
   var layerPieces;
   var stage;
 
-  var CreateStage =  function()
+  var CreateStage =  function(iWidth, iHeight)
   {
     stage = new Konva.Stage({
       container: 'container',
-      width: window.innerWidth,
-      height: window.innerHeight
+      width: iWidth,
+      height: iHeight
     });
 
     layerMap = new Konva.Layer();
@@ -283,9 +283,62 @@ var myKonvas = (function() {
       //callBackParam.callBack(oKimg);
   }
 
-  var InstaniateImgGridGroup2 = function(iImgKeys, iX, iY, iWrapCount, iCentered, iDraggable, iGroupPerImage)
+  var DrawRectOnImg = function(iKimg)
   {
-    var kgrid = InstantiateImgGrid2(iImgKeys, iX, iY, iWrapCount, iCentered, false, false, false);
+    var parent = iKimg.getParent();
+
+    var rect = new Konva.Rect({
+      x: iKimg.x(),
+      y: iKimg.y(),
+      width: iKimg.width(),
+      height: iKimg.height(),
+      stroke: 'yellow',
+      strokeWidth: 3,
+      id: 'rect_' + iKimg.id()
+    });
+
+    parent.add(rect);
+    parent.getLayer().draw();
+    
+    return rect;
+  }
+
+  var DeleteChildNodesByClass = function(iParent, iClass)
+  {
+    if(!iParent)
+      iParent = layerPieces;
+
+    var children = iParent.getChildren(function(node) {
+      return node.getClassName() === iClass;
+    });
+
+    var i = 0;
+    if(children)
+      for(i = 0; i < children.length; i++)
+        children[i].destroy();
+
+    return;
+  }
+
+  var DeleteChildNodeByID = function(iParent, iChildID)
+  {
+    var children = iParent.getChildren(function(node) {
+      return node.id() === iChildID;
+    });
+
+    if(children)
+      if(children.length.length === 1 )
+      {
+        children[0].destroy();
+        return true;
+      }
+
+    return false;
+  }
+
+  var InstaniateImgGridGroup2 = function(iImgKeys, iX, iY, iGapX, iGapY, iWrapCount, iCentered, iDraggable, iGroupPerImage)
+  {
+    var kgrid = InstantiateImgGrid2(iImgKeys, iX, iY, iGapX, iGapY, iWrapCount, iCentered, false, false, false);
 
     var groups = [];
 
@@ -324,7 +377,7 @@ var myKonvas = (function() {
     return { groups: groups, kimgs: kgrid.kimgs, width: kgrid.width, height: kgrid.height};
   }
 
-  var InstantiateImgGrid2 = function(iImgKeys, iX, iY, iWrapCount, iCentered, iAddToLayer, iDraggable, iDrawLayer)
+  var InstantiateImgGrid2 = function(iImgKeys, iX, iY, iGapX, iGapY, iWrapCount, iCentered, iAddToLayer, iDraggable, iDrawLayer)
   {
     var rowCount = Math.floor(iImgKeys.length / iWrapCount);
 
@@ -337,20 +390,20 @@ var myKonvas = (function() {
     {
       var row = iImgKeys.splice(0, iWrapCount);
 
-      var karray = InstantiateImgArray2(row, iX, iY + heightreturn, true, iCentered, false, iDraggable, false);
+      var karray = InstantiateImgArray2(row, iX, iY + heightreturn, iGapX, true, iCentered, false, iDraggable, false);
       kimgsTotal = kimgsTotal.concat(karray.kimgs);
 
       if (karray.width > widthreturn)
         widthreturn = karray.width;
       
-      heightreturn = heightreturn + karray.height;
+      heightreturn = heightreturn + karray.height + iGapY;
 
       rowCount--;
     }
     
     if (iImgKeys.length > 0) {
 
-      var karray = InstantiateImgArray2(iImgKeys, iX, iY + heightreturn, true, iCentered, false, iDraggable, false);
+      var karray = InstantiateImgArray2(iImgKeys, iX, iY + heightreturn, iGapX, true, iCentered, false, iDraggable, false);
       kimgsTotal = kimgsTotal.concat(karray.kimgs);
 
       if (karray.width > widthreturn)
@@ -365,7 +418,7 @@ var myKonvas = (function() {
     return { kimgs: kimgsTotal, width: widthreturn, height: heightreturn };
   }
 
-  var InstantiateImgArray2 = function(iImgKeys, iX, iY, iXdir, iCentered, iAddToLayer, iDraggable, iDrawLayer)
+  var InstantiateImgArray2 = function(iImgKeys, iX, iY, iGap, iXdir, iCentered, iAddToLayer, iDraggable, iDrawLayer)
   {
     var i = 0;
     var xOffset = 0;
@@ -390,9 +443,9 @@ var myKonvas = (function() {
 
       if(iXdir === true)
       {
-        xOffset = xOffset + imageDOM.width;
+        xOffset = xOffset + imageDOM.width + (i < iImgKeys.length - 1 ? iGap: 0);
       } else {
-        yOffset = yOffset + imageDOM.height;
+        yOffset = yOffset + imageDOM.height + (i < iImgKeys.length - 1 ? iGap: 0);
       }
 
       i++;
@@ -404,7 +457,9 @@ var myKonvas = (function() {
     if (iDrawLayer)
       layerPieces.draw();
 
-    return { kimgs: kimgs, width: widthKeep, height: heightKeep };
+    return { kimgs: kimgs, 
+            width: iXdir ? xOffset : widthKeep , 
+            height: iXdir ? heightKeep: yOffset };
   } 
 
   var InstantiateSingleImg2 = function(iImgKey,iX, iY, iCentered, iDraggable, iAddToLayer, iDrawLayer)
@@ -745,7 +800,10 @@ var myKonvas = (function() {
     ResizeStageToFitPieces: ResizeStageToFitPieces,
     GetPointerPos: GetPointerPos,
     AddNodeToPiecesLayer: AddNodeToPiecesLayer,
-    GetNodeFromPiecesLayer: GetNodeFromPiecesLayer
+    GetNodeFromPiecesLayer: GetNodeFromPiecesLayer,
+    DrawRectOnImg: DrawRectOnImg,
+    DeleteChildNodeByID: DeleteChildNodeByID,
+    DeleteChildNodesByClass: DeleteChildNodesByClass
   };
 
 })();

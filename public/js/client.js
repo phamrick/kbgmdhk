@@ -62,7 +62,7 @@ var Client = (function(window) {
       attachDOMEventHandlers();
       attachSocketEventHandlers();
 
-      myKonvas.CreateStage();
+      myKonvas.CreateStage(screen.width, screen.height);
   
       // Join game
       socket.emit('join', gameID);
@@ -76,6 +76,7 @@ var Client = (function(window) {
         $('#bttnStartGame').click(function(ev) {
             socket.emit('assignroles', gameID);
             $(this).hide();
+            myKonvas.DeleteChildNodesByClass(null, 'Image');
         });
 
         $('#bttnDrawSceneCard').click(function(ev) {
@@ -162,6 +163,10 @@ var Client = (function(window) {
                     j++;
                     $('#pList' + j.toString()).text(key);
                 }
+
+                if (isHost)        
+                    loadImages(gameState.roleCardSamplesKeys, instCardsForStartScreen, gameState.roleCardSamplesKeys);
+
             }
 
         });
@@ -191,15 +196,13 @@ var Client = (function(window) {
             }
         });
         
-        
-
     };
 
     var instCardsPrivate = function(iPlayer)
     {
         var cardKeys = iPlayer.meansCards.concat(iPlayer.evidenceCards);
         cardKeys.push(iPlayer.role);
-        loadImages(cardKeys, instCardsAfterLoad, cardKeys);
+        loadImages(cardKeys, instCardsAfterLoadPrivate, cardKeys);
     }
 
     var instCardsPublic = function()
@@ -210,38 +213,146 @@ var Client = (function(window) {
         for(var playerKey in gameState.players)
         {
             var player = gameState.players[playerKey];
-            var cardKeys = player.meansCards.concat(player.evidenceCards);
-            params[player.name] = cardKeys;
-            allCardKeys = allCardKeys.concat(cardKeys);
+            if (player.role !== gameState.r_fsci)
+            {
+                var cardKeys = player.meansCards.concat(player.evidenceCards);
+                params[player.name] = cardKeys;
+                allCardKeys = allCardKeys.concat(cardKeys);
+            }
         }
 
         loadImages(allCardKeys, instCardsAfterLoadHost, params);
     }
 
-    var instCardsAfterLoadHost = function(iPlayerImgParams)
+    var instCardsForStartScreen = function(imgKeys)
+    {
+        var xOffset = 5;
+        var yOffset = 5;
+
+        var i = 1;
+        var j = 1;
+        var k = 0;
+
+        var xGap = 0;
+        var yGap = 0;
+        var xPadding = 200;
+        var yPadding = 100;
+
+        var xOffset = 0;
+        var yOffset = yPadding;
+
+        var kimg = null;
+
+        var columns = 8
+
+        for (j = 1; j < 4; j++)
+        {
+            xOffset = xPadding;
+
+            for (i = 1; i <= columns; i++)
+            {
+                if (i === 3 | i === 4 || i === 5 | i === 6 )
+                {
+                    console.log('skipping i = ' + i + ', j = ' + j + " ---- xOffset: " + xOffset);
+                    xOffset = xOffset + kimg.width() + xGap;
+
+                } else {
+
+                    console.log('creating img i = ' + i + ', j = ' + j + ' --- x: ' + xOffset + ", y: " + yOffset);
+                    kimg = myKonvas.InstantiateSingleImg2(imgKeys[k], xOffset, yOffset, false, true, true, false);
+
+                    if (k === 0)
+                    {
+                        xGap = (screen.width - (kimg.width()*columns) - (xPadding*2))/(columns-1);
+                        yGap = (screen.height - (kimg.height()*3) - (yPadding*2))/2;
+
+                        console.log('xGap = ' + xGap);
+                        console.log('yGap = ' + yGap);
+                    }
+
+                    xOffset = xOffset + kimg.width() + xGap;
+
+                    k++;
+                }
+
+                if (k == imgKeys.length)
+                break;
+            }
+
+            if (k == imgKeys.length)
+            break;
+
+            yOffset = yOffset + kimg.height() + yGap;
+        }
+
+        if(kimg)
+            kimg.getLayer().draw();
+    }
+
+    var instCardsAfterLoadHost = function(dictPlayerNameToCardKeyArray)
     {
         var dims = null;
         var xOffset = 5;
         var yOffset = 5;
 
-        for(var playerKey in iPlayerImgParams)
+        var i = 1;
+        var j = 1;
+        var k = 0;
+
+        var xGap = 0;
+        var yGap = 0;
+        var xPadding = 5;
+        var yPadding = 5;
+
+        var xOffset = 0;
+        var yOffset = yPadding;
+
+        var playerNames = Object.keys(dictPlayerNameToCardKeyArray);
+
+        for (j = 1; j < 5; j++)
         {
-            var player = iPlayerImgParams[playerKey];
+            var dims = null;
 
-            if (player.role !== gameState.r_fsci)
+            xOffset = xPadding;
+
+            for (i = 1; i < 5; i++)
             {
-                group = myKonvas.InstaniateImgGridGroup(player, xOffset, yOffset, 4, false, true, null);
-                addPlayerName(group, playerKey);
-                var dims = group.getClientRect();
-                yOffset = dims.height + yOffset + 10;
 
-                if(yOffset + dims.height > window.innerHeight)
+                if ( (i == 2 || i == 3) && j == 2)
                 {
-                    yOffset = 0;
-                    xOffset = xOffset + dims.width + 10;
+                    xOffset = xOffset + dims.width + xGap;
+
+                } else {
+
+                    var playerName = playerNames[k];
+                    var cardKeys = dictPlayerNameToCardKeyArray[playerName];
+                    var kobjs = myKonvas.InstaniateImgGridGroup2(cardKeys, xOffset, yOffset, 1, 1, 4, false, true, false);
+                    var group = kobjs.groups[0];
+
+                    addPlayerName(group, playerName);
+                    var dims = group.getClientRect();
+
+                    if (k === 0)
+                    {
+                        xGap = (screen.width - (dims.width*4) - (xPadding*2))/3;
+                        yGap = (screen.height - (dims.height*3) - (yPadding*2))/2;
+                    }
+
+                    xOffset = xOffset + dims.width + xGap;
+
+                    k++ 
                 }
+
+                if (k == playerNames.length)
+                break;
             }
+
+            if (k == playerNames.length)
+            break;
+
+            yOffset = yOffset + dims.height + yGap;
         }
+
     }
 
     var addPlayerName = function(iGroup, iPlayerName) {
@@ -265,16 +376,17 @@ var Client = (function(window) {
         );
     }
 
-    var instCardsAfterLoad = function(iCardKeys)
+    var instCardsAfterLoadPrivate = function(iCardKeys)
     {
-        var callback = null;
-        if(role !== gameState.r_fsci)
-            callback = hideRoleKimg;
+        var kobjs = myKonvas.InstaniateImgGridGroup2(iCardKeys, 0, 0, 1, 1, 4, false, false, false);
 
-        var group = myKonvas.InstaniateImgGridGroup(iCardKeys, 0, 0, 4, false, true, callback);
+        var group = kobjs.groups[0];
 
         if(role !== gameState.r_fsci)
+        {
+            hideRoleKimg(group);
             setDblClickOnCards(group);
+        }
     }
 
     var hideRoleKimg = function(iGroup)
@@ -295,6 +407,8 @@ var Client = (function(window) {
                 id === gameState.r_accmp)
             {
                 kimg.hide();
+                iGroup.getLayer().draw();
+                break;
             }
 
             i--;
@@ -414,13 +528,47 @@ var Client = (function(window) {
         }
     }
 
+    var dblclickOnRect = function (evt)
+    {
+        var rect = evt.target;
+        var id = rect.id();
+        if(id.startsWith('rect_means_'))
+        {
+            myMeansChosen = "";
+            var group = rect.getParent();
+            rect.destroy();
+            group.getLayer().draw();
+        }
+        if(id.startsWith('rect_evidence_'))
+        {
+            myEvidenceChosen = "";
+            var group = rect.getParent();
+            rect.destroy();
+            group.getLayer().draw();
+        }
+    }
+
     var dblclickOnCard = function(evt)
     {
         var kimg = evt.target;
-        if (kimg.id().startsWith('means'))
+
+        if (kimg.id().startsWith('means')  && myMeansChosen.length === 0)
+        {
+            myKonvas.DrawRectOnImg(kimg).on('dblclick', dblclickOnRect);
             myMeansChosen = kimg.id();
-        if (kimg.id().startsWith('evidence'))
+        }
+        // } else {
+        //     return;
+        // }
+
+        if (kimg.id().startsWith('evidence')  && myEvidenceChosen.length === 0)
+        {
+            myKonvas.DrawRectOnImg(kimg).on('dblclick', dblclickOnRect);
             myEvidenceChosen = kimg.id();
+        }
+        // } else {
+        //     return;
+        // }
 
         if (myMeansChosen.length === 0 || myEvidenceChosen.length === 0)
         {
@@ -431,18 +579,16 @@ var Client = (function(window) {
             if (gameState.meansChosen.length > 0 && gameState.evidenceChosen.length > 0)
                 return;
             
-            if (myMeansChosen.length > 0 && myEvidenceChosen.length > 0)
-            {
-                socket.emit(gameState.evt_type_murdercardschosen, 
-                            {gameID: gameID,
-                            meansChosen:  myMeansChosen,
-                            evidenceChosen: myEvidenceChosen});
-            }
+            socket.emit(gameState.evt_type_murdercardschosen, 
+                        {gameID: gameID,
+                        meansChosen:  myMeansChosen,
+                        evidenceChosen: myEvidenceChosen});
+        } 
 
-            createInfoBoxAndShowRole();
-        }  else {
-            createInfoBoxAndShowRole();
-        }
+        var group = kimg.getParent();
+        createInfoBoxAndShowRole();
+        myKonvas.DeleteChildNodesByClass(group, 'Rect');
+        group.getLayer().draw();
     }
 
     var loadImages = function(iImageKeys, callback, params)
@@ -452,16 +598,22 @@ var Client = (function(window) {
         while(i < iImageKeys.length)
         {
             var keySrc = iImageKeys[i];
-			images[keySrc] = new Image();
-			images[keySrc].onload = function() {
-				loadedImages++;
-				console.log('loadedImages: ' + loadedImages.toString());
-				if (loadedImages >= iImageKeys.length) {
-                    if(callback)
-                        callback(params);
+            if(keySrc in images)
+            {
+                loadedImages++;
+            } else {
+                images[keySrc] = new Image();
+                images[keySrc].onload = function() {
+                    loadedImages++;
+                    console.log('loadedImages: ' + loadedImages.toString());
+                    if (loadedImages >= iImageKeys.length) {
+                        if(callback)
+                            callback(params);
+                    }
                 }
+                images[keySrc].src = "/img/" + keySrc + ".png";
             }
-            images[keySrc].src = "/img/" + keySrc + ".png";
+
             i++;
         }
     }
@@ -478,7 +630,7 @@ var Client = (function(window) {
 
     var instantiateFirstSixCards = function(keys)
     {
-        var kobjs = myKonvas.InstaniateImgGridGroup2(keys, -15, 260, 2, false, false, true);
+        var kobjs = myKonvas.InstaniateImgGridGroup2(keys, -15, 260, 5, 0, 6, false, false, true);
         var i = 0;
 
         if(!isHost) 
@@ -586,7 +738,7 @@ var Client = (function(window) {
     {
         var keys = [gameState.sceneKeys[sceneCount]];
 
-        var kobjs = myKonvas.InstaniateImgGridGroup2(keys, iReplaceThis.x(), iReplaceThis.y(), 1, false, isHost, true);
+        var kobjs = myKonvas.InstaniateImgGridGroup2(keys, iReplaceThis.x(), iReplaceThis.y(), 0, 0, 1, false, isHost, true);
         var kimg = kobjs.kimgs[0];
         //var group = kobjs.groups[0];
 
@@ -659,7 +811,11 @@ var Client = (function(window) {
 
         var instantiateFirstSixCards = function(params)
         {
-            myKonvas.InstaniateImgGridGroup2(firstSixKeys, screen.width - 3*cardWidth, 10, 3, false, true, true);
+            //myKonvas.InstaniateImgGridGroup2(firstSixKeys, screen.width - 3*cardWidth, 10, 0, 0, 3, false, true, true);
+            var kobj = myKonvas.InstaniateImgGridGroup2(firstSixKeys, 0, 0, 2, 2, 6, false, true, true);
+            for(i = 0; i < kobj.groups.length; i++)
+                kobj.groups[i].move({x: (screen.width - kobj.width)/2, y: (screen.height - kobj.height)/2})
+
             var i = 0;
             for(i = 0; i < playercount; i++)
             {
